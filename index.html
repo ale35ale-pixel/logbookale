@@ -63,9 +63,10 @@
   .prev-gen{font-size:11px;color:#aaa;margin-top:6px;font-style:italic}
 
   /* SAVE */
-  .save-wrap{padding:16px 16px 40px}
-  .save-btn{width:100%;background:#000;color:#fff;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
-  .save-btn:active{opacity:0.8}
+  .save-ex-btn{width:100%;background:#000;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:12px}
+  .save-ex-btn:active{opacity:0.8}
+  .save-ex-btn.saved{background:#34c759}
+  .bottom-pad{height:30px}
 
   /* TOAST */
   .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;border-radius:20px;padding:10px 22px;font-size:14px;font-weight:500;display:none;z-index:999;white-space:nowrap;backdrop-filter:blur(10px)}
@@ -93,12 +94,10 @@
     <div class="sess-date" id="sess-date"></div>
   </div>
   <div id="ex-container"></div>
-  <div class="save-wrap">
-    <button class="save-btn" onclick="saveSession()">Salva sessione</button>
-  </div>
+  <div class="bottom-pad"></div>
 </div>
 
-<div class="toast" id="toast">✓ Sessione salvata</div>
+<div class="toast" id="toast">✓ Salvato</div>
 
 <script>
 const SESSIONS = [
@@ -254,6 +253,7 @@ function openSession(sid){
         ${prevHTML}
         <textarea class="gen-notes" rows="2" placeholder="Note generali sull'esercizio..." id="gen_${ei}"></textarea>
         ${prevNotes}
+        <button class="save-ex-btn" id="savebtn_${ei}" onclick="saveExercise(${ei})">Salva esercizio</button>
       </div>
     `;
     container.appendChild(block);
@@ -283,9 +283,22 @@ function goHome(){
   window.scrollTo(0,0);
 }
 
-function saveSession(){
+function getOrCreateTodayEntry(sid){
+  const d = getData();
+  if(!d[sid]) d[sid] = [];
+  const today = new Date().toDateString();
+  let entry = d[sid].find(e => new Date(e.date).toDateString() === today);
+  if(!entry){
+    entry = { date: new Date().toISOString(), exercises: [] };
+    d[sid].push(entry);
+  }
+  return { d, entry };
+}
+
+function saveExercise(ei){
   if(!currentSession) return;
-  const exercisesData = currentSession.exercises.map((ex, ei) => ({
+  const ex = currentSession.exercises[ei];
+  const exData = {
     name: ex.name,
     series: Array.from({length: ex.series}, (_, si) => ({
       kg:   document.getElementById(`kg_${ei}_${si}`)?.value || '',
@@ -293,17 +306,23 @@ function saveSession(){
       note: document.getElementById(`note_${ei}_${si}`)?.value || ''
     })),
     notes: document.getElementById(`gen_${ei}`)?.value || ''
-  }));
+  };
 
-  const entry = { date: new Date().toISOString(), exercises: exercisesData };
-  const d = getData();
-  if(!d[currentSession.id]) d[currentSession.id] = [];
-  d[currentSession.id].push(entry);
+  const { d, entry } = getOrCreateTodayEntry(currentSession.id);
+  entry.exercises[ei] = exData;
   saveData(d);
+
+  const btn = document.getElementById(`savebtn_${ei}`);
+  btn.textContent = '✓ Salvato';
+  btn.classList.add('saved');
+  setTimeout(() => {
+    btn.textContent = 'Salva esercizio';
+    btn.classList.remove('saved');
+  }, 2000);
 
   const toast = document.getElementById('toast');
   toast.style.display = 'block';
-  setTimeout(() => toast.style.display = 'none', 2200);
+  setTimeout(() => toast.style.display = 'none', 1800);
 }
 
 renderHome();
